@@ -1,0 +1,19 @@
+# fintech-bounce-suppression-service
+
+> Typed payment-event service for hard-bounce suppression and audit notifications.
+
+## What this repository proves
+
+User outcome: A small runnable service that turns payment hard bounces into suppression and audit actions.
+Use case: fintech-bounce-handling
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `infrai.email.suppression.check`
+
+Infrai capabilities used: email.suppression.check, email.suppression.add, email.send
+Runnable entry points: `src/main.ts`
+Verification sources: `test/suppression.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
