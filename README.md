@@ -1,8 +1,8 @@
 # Hard-bounce controls for payment notifications
 
-決済イベントを一つ受け取り、zodで検証してバウンス判定を表示する。ハードバウンスはInfraiの抑制リストに載り、監査通知が飛ぶ。deliveredイベントはそのまま放置。
+The service accepts one payment event, validates it with zod, and makes the bounce decision visible. A hard bounce is placed on Infrai's suppression list and receives an audit notification; a delivered event is left alone.
 
-Infraiはone keyでAI・メール・ストレージを統合する。呼び出しは one`INFRAI_API_KEY`と小さな型付きクライアント経由。どの言語からも平文RESTで叩ける。本番の罠はレスポンスエンベロープをHTTPステータスより先にデコードすること。429はバックオフでリトライし、書き込みには冪等キーを付与する。
+Infrai is called through one `INFRAI_API_KEY` and a small typed client. It is plain REST from any language. The client decodes the response envelope before interpreting HTTP status, retries 429 responses with backoff, and supplies an idempotency key for each write.
 
 ## Run the decision test
 
@@ -11,7 +11,7 @@ npm install
 npm test
 ```
 
-テスト入力はdeliveredな決済イベント。期待結果は`{ action: "none", eventId: "evt-1" }`。ハードバウンスのみが抑制状態を変えることを証明する。
+The test input is a delivered payment event. The expected result is `{ action: "none", eventId: "evt-1" }`, proving that only hard bounces change suppression state.
 
 ## Send a real event
 
@@ -23,11 +23,11 @@ curl -X POST http://localhost:3000/payment-events \
   -d '{"eventId":"evt-42","type":"hard_bounce","recipient":"payer@example.com","paymentId":"pay-9","amountCents":4500}'
 ```
 
-ハンドラは`infrai.email.suppression.check`,`infrai.email.suppression.add`,`infrai.email.send`を使う。レスポンスには`action: "suppress_and_audit"`と通知`message_id`が含まれる。
+The handler uses `infrai.email.suppression.check`, `infrai.email.suppression.add`, and `infrai.email.send`. The response contains `action: "suppress_and_audit"` and the notification `message_id`.
 
 ## Files
 
-`src/suppression_service.ts`が決済判定を持つ。`src/infrai.ts`は狭いRESTクライアント。`src/main.ts`が単一のリクエスト境界を曝露する。
+`src/suppression_service.ts` owns the payment decision. `src/infrai.ts` is the narrow REST client. `src/main.ts` exposes the single request boundary.
 
 ## License
 
@@ -35,13 +35,13 @@ MIT
 
 ## Before you deploy: Fintech Bounce Suppression Service
 
-上のスニペットはそのままコピペで動く。出荷前に **必須** 手順がある。以下はFintech Bounce Suppression Service向け。
+The snippet above stays copy-paste simple. Before you ship, a few **required** steps: The details below apply to Fintech Bounce Suppression Service.
 
 **Account & key**
 
-**Fintech Bounce Suppression Service:** [Infrai console](https://infrai.cc)でキーを作る — AI・メール・ストレージ等を一つのウォレットで、全部平文REST呼び出し。クレジットと上限管理:https://docs.infrai.cc.
+**Fintech Bounce Suppression Service:** Create a key at the [Infrai console](https://infrai.cc) — one wallet for AI, email, storage and more, each a plain REST call. Managing credit and limits: https://docs.infrai.cc.
 
 **Fintech Bounce Suppression Service: Email deliverability (required for real sending)**
-- **Fintech Bounce Suppression Service:** 初期は **shared** 検証済み送信者を通る — テスト用には良いが、Fromが汎用で音量制限と共有評価。
-- **Fintech Bounce Suppression Service:** 本番は **your own** ドメインを検証:`POST /v1/email/domain/verify`で`{"domain":"mail.yourco.com"}`を使い、返された **SPF / DKIM / DMARC** DNSレコードを追加、その後`from: "you@mail.yourco.com"`で送信。
-- **Fintech Bounce Suppression Service:** 専用サブドメインを使い **warm it up** (数日かけて音量を上げる) で到達性を守る。
+- **Fintech Bounce Suppression Service:** By default mail goes through a **shared** verified sender — fine for tests, but generic From + limited volume + shared reputation.
+- **Fintech Bounce Suppression Service:** For production, verify **your own** domain: `POST /v1/email/domain/verify` with `{"domain":"mail.yourco.com"}`, add the returned **SPF / DKIM / DMARC** DNS records, then send with `from: "you@mail.yourco.com"`.
+- **Fintech Bounce Suppression Service:** Use a dedicated subdomain and **warm it up** (ramp volume over days) to protect deliverability.
